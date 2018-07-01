@@ -54,10 +54,11 @@ def convert(sessionstore):
 
 	tabIndex = 0
 	groupCounter = 0
+	windowGroupCounter = 0
 	for group in groups:
 		for groupIndex in group:
 			tabGroup = {
-				"title": group[groupIndex]["title"],
+				"title": "Window {0} - {1}".format(windowGroupCounter + 1, group[groupIndex]["title"]),
 				"tabs": [],
 				"id": groupCounter + 1,
 				"windowId": -1, #??
@@ -85,6 +86,7 @@ def convert(sessionstore):
 				tabIndex = tabIndex + 1
 
 			sync_tab_data["groups"].append(tabGroup)
+		windowGroupCounter = windowGroupCounter +1
 
 	print(json.dumps(sync_tab_data, sort_keys=True, indent=4, separators=(',', ': ')))
 
