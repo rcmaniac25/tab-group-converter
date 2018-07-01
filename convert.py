@@ -10,9 +10,96 @@ OS.File.read(file, { compression: "lz4" }).then(bytes => {
 });
 """
 
-import argparse
+import json
+
+def parseGroupData(sessionstore):
+	import io
+
+	session = {}
+	with io.open(sessionstore, mode='r', encoding="utf-8") as f:
+		session = json.load(f)
+
+	groups = []
+	for window in session["windows"]:
+		windowGroup = {}
+
+		if window["extData"] and window["extData"]["tabview-group"]:
+			groupParsed = json.loads(window["extData"]["tabview-group"])
+			groupsParsed = json.loads(window["extData"]["tabview-groups"])
+
+			activeGroupId = groupsParsed["activeGroupId"]
+
+			for groupId in groupParsed:
+				group = groupParsed[groupId]
+				windowGroup[group["id"]] = {
+					"title": group["title"],
+					"tabs": []
+				}
+
+			for tab in window["tabs"]:
+				if len(tab["entries"]) > 0 and tab["extData"] and tab["extData"]["tabview-tab"]:
+					tabGroupUi = json.loads(tab["extData"]["tabview-tab"])
+
+					entry0 = tab["entries"][0]
+
+					windowGroup[tabGroupUi["groupID"]]["tabs"].append({
+						"title": entry0["title"],
+						"url": entry0["url"] #if entry0["originalURI"]: entry0["originalURI"] else: entry0["url"]
+					})
+		groups.append(windowGroup)
+
+	return groups
+
+	# <per-window> (sessionstore -> windows -> <index>)
+	# <getting groups>
+	#extData -> tabview-group -> <parseJson> -> <group ID> -> "title" (also, assign a unique group ID but keep a map between the two and add the window index to the window)
+	# <getting active groups>
+	#extData -> tabview-groups -> <parseJson> -> "activeGroupId"
+	# <getting tabs for a group>
+	#tabs -> <index> -> extData -> tabview-tab -> <parseJson> -> "groupId" (map to the unique group ID)
+
+def convert(sessionstore):
+	groups = parseGroupData(sessionstore)
+
+	sync_tab_data = {
+		"version": [
+			"syncTabGroups",
+			1
+		],
+		"groups": []
+	}
+
+	groupCounter = 0
+	for group in groups:
+		for groupIndex in group:
+			tabGroup = {
+				"title": group[groupIndex]["title"],
+				"tabs": [],
+				"id": groupCounter + 1,
+				"windowId": -1,
+				"index": groupCounter,
+				"position": 0, #todo
+				"expand": False,
+				"lastAccessed": 0,
+				"incognito": False
+			}
+			groupCounter = groupCounter + 1
+
+			#todo: tabs
+
+			sync_tab_data["groups"].append(tabGroup)
+
+	# Creating the new list:
+	# Populate "groups" with each group. Title and unique ID appended to the list. (windowId = -1, position = <the order the list should be shown in UI>, expand/incognito = false, lastAccess = 0)
+	# each tab ??
+
+	#TODO
+
+	print(json.dumps(sync_tab_data, sort_keys=True, indent=4, separators=(',', ': ')))
 
 if __name__ == "__main__":
+	import argparse
+
 	parser = argparse.ArgumentParser(description="Convert from 'Simplified Tab Groups' (by Dennis Schubert) tab group data to 'Sync tab groups' (by Morikko) tab group data")
 	parser.add_argument('-a', '--about', action="store_true", help="What this program is supposed to do. Note: add some random value to get the program to not complain about sessionstore being required...")
 	parser.add_argument('sessionstore')
@@ -42,29 +129,5 @@ if __name__ == "__main__":
 		print("This will save a file 'recovery.jsonlz4.uncompressed' in the same folder as the recovery file, but now this utility can read it\n")
 		print("You're now ready to switch to a new version of Firefox... good luck")
 	else:
-		sessionstore = args.sessionstore
-
-		sync_tab_data = {
-			"version": [
-				"syncTabGroups",
-				1
-			],
-			"groups": []
-		}
-
-		# <per-window> (sessionstore -> windows -> <index>)
-		# <getting groups>
-		#extData -> tabview-group -> <parseJson> -> <group ID> -> "title" (also, assign a unique group ID but keep a map between the two and add the window index to the window)
-		# <getting active groups>
-		#extData -> tabview-groups -> <parseJson> -> "activeGroupId"
-		# <getting tabs for a group>
-		#tabs -> <index> -> extData -> tabview-tab -> <parseJson> -> "groupId" (map to the unique group ID)
-
-		# Creating the new list:
-		# Populate "groups" with each group. Title and unique ID appended to the list. (windowId = -1, position = <the order the list should be shown in UI>, expand/incognito = false, lastAccess = 0)
-		# each tab ??
-
-		#TODO
-
-		print(sync_tab_data)
+		convert(args.sessionstore)
 		
