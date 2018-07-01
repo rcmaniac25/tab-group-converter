@@ -44,19 +44,14 @@ def parseGroupData(sessionstore):
 
 					windowGroup[tabGroupUi["groupID"]]["tabs"].append({
 						"title": entry0["title"],
-						"url": entry0["url"] #if entry0["originalURI"]: entry0["originalURI"] else: entry0["url"]
+						"url": entry0["url"], #if entry0["originalURI"]: entry0["originalURI"] else: entry0["url"],
+						"icon": tab["image"],
+						"hidden": tab["hidden"],
+						"lastAccessed": tab["lastAccessed"],
 					})
 		groups.append(windowGroup)
 
 	return groups
-
-	# <per-window> (sessionstore -> windows -> <index>)
-	# <getting groups>
-	#extData -> tabview-group -> <parseJson> -> <group ID> -> "title" (also, assign a unique group ID but keep a map between the two and add the window index to the window)
-	# <getting active groups>
-	#extData -> tabview-groups -> <parseJson> -> "activeGroupId"
-	# <getting tabs for a group>
-	#tabs -> <index> -> extData -> tabview-tab -> <parseJson> -> "groupId" (map to the unique group ID)
 
 def convert(sessionstore):
 	groups = parseGroupData(sessionstore)
@@ -69,6 +64,7 @@ def convert(sessionstore):
 		"groups": []
 	}
 
+	tabIndex = 0
 	groupCounter = 0
 	for group in groups:
 		for groupIndex in group:
@@ -76,24 +72,31 @@ def convert(sessionstore):
 				"title": group[groupIndex]["title"],
 				"tabs": [],
 				"id": groupCounter + 1,
-				"windowId": -1,
+				"windowId": -1, #??
 				"index": groupCounter,
-				"position": 0, #todo
+				"position": groupCounter,
 				"expand": False,
 				"lastAccessed": 0,
 				"incognito": False
 			}
 			groupCounter = groupCounter + 1
 
-			#todo: tabs
+			for tab in group[groupIndex]["tabs"]:
+				tabGroup["tabs"].append({
+					"title": tab["title"],
+					"url": tab["url"],
+					"favIconUrl": tab["icon"],
+					"hidden": False, #tab["hidden"]
+					"lastAccessed": tab["lastAccessed"],
+					"pinned": False,
+					"windowId": tabGroup["windowId"],
+					"discarded": False,
+					"active": False,
+					"id": tabIndex
+				})
+				tabIndex = tabIndex + 1
 
 			sync_tab_data["groups"].append(tabGroup)
-
-	# Creating the new list:
-	# Populate "groups" with each group. Title and unique ID appended to the list. (windowId = -1, position = <the order the list should be shown in UI>, expand/incognito = false, lastAccess = 0)
-	# each tab ??
-
-	#TODO
 
 	print(json.dumps(sync_tab_data, sort_keys=True, indent=4, separators=(',', ': ')))
 
@@ -130,4 +133,3 @@ if __name__ == "__main__":
 		print("You're now ready to switch to a new version of Firefox... good luck")
 	else:
 		convert(args.sessionstore)
-		
