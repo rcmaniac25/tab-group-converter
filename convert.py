@@ -120,6 +120,7 @@ if __name__ == "__main__":
 		print('});')
 		print("================\n")
 		print("This will save a file 'recovery.jsonlz4.uncompressed' in the same folder as the recovery file, but now this utility can read it\n")
+		print("If that doesn't work, try https://gist.github.com/jscher2000/07f94249b0a5f6d565fb20d88b73bb91 (instructions at top) which came from a mod on Mozilla's forums: https://support.mozilla.org/en-US/questions/1179363#answer-1018017\n")
 		print("You're now ready to switch to a new version of Firefox... good luck")
 	else:
 		convert(args.sessionstore)
