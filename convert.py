@@ -1,4 +1,5 @@
 import json
+import sys
 
 def parseGroupData(sessionstore):
 	import io
@@ -28,11 +29,16 @@ def parseGroupData(sessionstore):
 				if len(tab["entries"]) > 0 and tab["extData"] and tab["extData"]["tabview-tab"]:
 					tabGroupUi = json.loads(tab["extData"]["tabview-tab"])
 
-					entry0 = tab["entries"][0]
+					entryIndex = tab["index"]
+					if (entryIndex != None and entryIndex > 0):
+						entry = tab["entries"][entryIndex - 1]
+					else:
+						entry = tab["entries"][len(tab["entries"]) - 1]
+						print("Not sure which entry to use. Current={0}".format(entry["url"]), file=sys.stderr)
 
 					windowGroup[tabGroupUi["groupID"]]["tabs"].append({
-						"title": entry0["title"],
-						"url": entry0["url"], #if entry0["originalURI"]: entry0["originalURI"] else: entry0["url"],
+						"title": entry["title"],
+						"url": entry["url"], #if entry["originalURI"]: entry["originalURI"] else: entry["url"],
 						"icon": tab["image"],
 						"hidden": tab["hidden"],
 						"lastAccessed": tab["lastAccessed"],
